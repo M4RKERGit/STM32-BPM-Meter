@@ -60,23 +60,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int calcBPM(uint32_t *lastBeats, int size)
-{
-	float freq;
-	uint32_t averageTime;
-	int32_t difference[7] = {0, 0, 0, 0, 0, 0, 0};
-	uint32_t sum = 0;
-	for (int i = 0; i < (size - 1); i++)
-	{
-		difference[i] = (lastBeats[i+1] - lastBeats[i]);
-		if (difference[i] < 0) difference[i] = difference[i]*(-1);
-		sum += difference[i];
-	}
-	averageTime = sum / (size - 1);
-	freq = 1/averageTime;
-	int toRet = freq * 60;
-	return toRet;
-}
 /* USER CODE END 0 */
 
 /**
@@ -117,18 +100,7 @@ int main(void)
   uint32_t lastBeats[8] = {0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U};
   int arrayCounter = 0;
   int BPM = 0;
-  char buf[32];
-  /*while(1)																	//кусок для теста и отладки
-  {
-	  if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2))
-	  	  {
-	  		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	  		  uint32_t jojo = HAL_GetTick();
-	  		  HAL_UART_Transmit(&huart1, (uint8_t*)jojo, sizeof(32), 1000);
-	  		  HAL_UART_Transmit(&huart1, (uint8_t*)"\n", 2, 1000);
-	  		  HAL_Delay(250);
-	  	  }
-  }*/
+  char buf[4];
   while (1)
   {
 	  if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2))
@@ -141,31 +113,26 @@ int main(void)
 		  {
 			  arrayCounter = 0;
 		  }
-
-
-		  float freq;
 		  float averageTime;
 		  uint32_t difference[7] = {0, 0, 0, 0, 0, 0, 0};
 		  long sum = 0;
 		  for (int i = 0; i < 7; i++)
 		  {
-		  	difference[i] = lastBeats[i+1] - lastBeats[i];
+		  	difference[i] = (lastBeats[i+1] - lastBeats[i]);
 		  	sum += difference[i];
 		  }
 		  averageTime = sum / (7);
-		  freq = 1000/averageTime;
-		  BPM = freq * 60;
-
-
-
-
-		  //BPM = calcBPM(lastBeats, SELECTION_SIZE);
-		  sprintf(buf, "%d", BPM);	//вот тут вылетает
-		  HAL_Delay(100);
+		  BPM = 60000/averageTime;
+		  if (BPM < 0)
+		  {
+			  BPM = BPM * (-1);
+		  }
+		  sprintf(buf, "%d", BPM);
+		  HAL_Delay(180);
 	  }
 	  if ((HAL_GetTick() % 1001) >= 1000)
 	  {
-		  HAL_UART_Transmit(&huart1, (uint8_t*)buf, sizeof(32), 1000);
+		  HAL_UART_Transmit(&huart1, (uint8_t*)buf, 3, 1000);
 		  HAL_UART_Transmit(&huart1, (uint8_t*)"\n", 2, 1000);
 	  }
   }
