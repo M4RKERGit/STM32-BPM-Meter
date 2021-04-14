@@ -21,11 +21,12 @@
 #include "main.h"
 #include "usart.h"
 #include "gpio.h"
-#include <stdio.h>
-#include <math.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include <math.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,12 +39,10 @@
 #define BUFFER_LEN  1
 UART_HandleTypeDef huart1;
 uint8_t RX_BUFFER[BUFFER_LEN] = {0};
-#define SELECTION_SIZE 8
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-int calcBPM(uint32_t *lastBeats, int size);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -98,37 +97,52 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   uint32_t lastBeats[8] = {0U, 0U, 0U, 0U, 0U, 0U, 0U, 0U};
+  int delay_presets[4] = {100, 180, 250, 350};
+  int preset_counter = 0;
   int arrayCounter = 0;
   int BPM = 0;
   char buf[4];
+  char note_buf[4];
+  char greet[32] = "By Spustya Pukava Inc.\n";
+  HAL_UART_Transmit(&huart1, (uint8_t*)greet, sizeof(greet), 1000);
+
   while (1)
   {
+	  if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0))
+	  	  {
+	  		  preset_counter ++;
+	  		  if (preset_counter == 4)	preset_counter = 0;
+	  		  sprintf(note_buf, "%d", delay_presets[preset_counter]);
+	  		  char note[32] = "Delay changed to ";
+	  		  strcat(note, note_buf);
+	  		  strcat(note, "\n");
+	  		  HAL_UART_Transmit(&huart1, (uint8_t*)note, sizeof(note), 1000);
+	  		  HAL_Delay(1000);
+	  	  }
 	  if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2))
 	  {
-		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		  lastBeats[arrayCounter] = HAL_GetTick();
+			  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+			  lastBeats[arrayCounter] = HAL_GetTick();
 
-		  arrayCounter ++;
-		  if (arrayCounter == 8)
-		  {
-			  arrayCounter = 0;
-		  }
-		  float averageTime;
-		  uint32_t difference[7] = {0, 0, 0, 0, 0, 0, 0};
-		  long sum = 0;
-		  for (int i = 0; i < 7; i++)
-		  {
-		  	difference[i] = (lastBeats[i+1] - lastBeats[i]);
-		  	sum += difference[i];
-		  }
-		  averageTime = sum / (7);
-		  BPM = 60000/averageTime;
-		  if (BPM < 0)
-		  {
-			  BPM = BPM * (-1);
-		  }
-		  sprintf(buf, "%d", BPM);
-		  HAL_Delay(180);
+			  arrayCounter ++;
+			  if (arrayCounter == 8) arrayCounter = 0;
+
+			  float averageTime;
+			  uint32_t difference[7] = {0, 0, 0, 0, 0, 0, 0};
+			  long sum = 0;
+			  for (int i = 0; i < 7; i++)
+			  {
+				  difference[i] = (lastBeats[i+1] - lastBeats[i]);
+				  sum += difference[i];
+			  }
+			  averageTime = sum / (7);
+			  BPM = 60000/averageTime;
+			  if (BPM < 0)
+			  {
+				  BPM = BPM * (-1);
+			  }
+			  sprintf(buf, "%d", BPM);
+			  HAL_Delay(delay_presets[preset_counter]);
 	  }
 	  if ((HAL_GetTick() % 1001) >= 1000)
 	  {
